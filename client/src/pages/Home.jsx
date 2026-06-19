@@ -1,17 +1,17 @@
 import React, { useState, useEffect } from 'react';
 import { useGame } from '../context/GameContext';
 import SkinCustomizer from '../components/SkinCustomizer';
-import PlayerAvatar from '../components/PlayerAvatar';
+import { useIsMobile } from '../utils/useIsMobile';
 
 export default function Home() {
   const { state, dispatch } = useGame();
+  const isMobile = useIsMobile();
   const [tab, setTab] = useState('create');
   const [joinCode, setJoinCode] = useState('');
   const [nameInput, setNameInput] = useState(state.playerName || '');
   const [skin, setSkin] = useState(state.playerSkin);
-  const [fromUrl, setFromUrl] = useState(false); // came via /join/CODE link
+  const [fromUrl, setFromUrl] = useState(false);
 
-  // Detect join URL on mount
   useEffect(() => {
     const path = window.location.pathname;
     const match = path.match(/\/join\/([A-Za-z]{6})/);
@@ -43,40 +43,37 @@ export default function Home() {
 
   return (
     <div className="page" style={{ position: 'relative', minHeight: '100vh', background: 'linear-gradient(135deg, #FFF5E4 0%, #f0ebff 50%, #e0f7f6 100%)' }}>
-      {decos.map((d, i) => (
+      {!isMobile && decos.map((d, i) => (
         <span key={i} className="deco" style={{
           top: `${10 + (i * 9) % 80}%`, left: `${(i * 11) % 90}%`,
           fontSize: 24 + (i % 3) * 8, animationDelay: `${i * 0.4}s`, animationDuration: `${3 + i % 3}s`,
         }}>{d}</span>
       ))}
 
-      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minHeight: '100vh', padding: '40px 20px', position: 'relative', zIndex: 1 }}>
-        {/* Logo */}
-        <div style={{ textAlign: 'center', marginBottom: 32 }}>
-          <div style={{ fontSize: 72, marginBottom: 4 }}>🎨</div>
-          <h1 style={{ fontSize: 52, fontWeight: 900, color: 'var(--dark)', lineHeight: 1, letterSpacing: -2 }}>צַיָּירוֹן!</h1>
-          <p style={{ fontSize: 16, color: '#888', fontWeight: 600, marginTop: 8 }}>צייר • נחש • שחק • תצחק 😂</p>
+      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minHeight: '100vh', padding: isMobile ? '24px 16px' : '40px 20px', position: 'relative', zIndex: 1 }}>
+        <div style={{ textAlign: 'center', marginBottom: isMobile ? 20 : 32 }}>
+          <div style={{ fontSize: isMobile ? 52 : 72, marginBottom: 4 }}>🎨</div>
+          <h1 style={{ fontSize: isMobile ? 38 : 52, fontWeight: 900, color: 'var(--dark)', lineHeight: 1, letterSpacing: -2 }}>צַיָּירוֹן!</h1>
+          <p style={{ fontSize: 14, color: '#888', fontWeight: 600, marginTop: 6 }}>צייר • נחש • שחק • תצחק 😂</p>
         </div>
 
-        <div className="card" style={{ width: '100%', maxWidth: 500, padding: 32 }}>
+        <div className="card" style={{ width: '100%', maxWidth: 500, padding: isMobile ? '20px 16px' : 32 }}>
 
-          {/* If joined via URL, show banner */}
           {fromUrl && joinCode && (
-            <div style={{ background: 'linear-gradient(135deg, #e0f7f6, #c8f0ee)', border: '2px solid var(--accent)', borderRadius: 14, padding: '12px 16px', marginBottom: 20, textAlign: 'center' }}>
-              <div style={{ fontSize: 13, color: 'var(--accent)', fontWeight: 800 }}>הוזמנת להצטרף ללובי 🎉</div>
-              <div style={{ fontSize: 28, fontWeight: 900, letterSpacing: 8, color: 'var(--dark)', fontFamily: 'monospace', marginTop: 4 }}>{joinCode}</div>
+            <div style={{ background: 'linear-gradient(135deg, #e0f7f6, #c8f0ee)', border: '2px solid var(--accent)', borderRadius: 14, padding: '12px 16px', marginBottom: 16, textAlign: 'center' }}>
+              <div style={{ fontSize: 12, color: 'var(--accent)', fontWeight: 800 }}>הוזמנת להצטרף ללובי 🎉</div>
+              <div style={{ fontSize: 26, fontWeight: 900, letterSpacing: 8, color: 'var(--dark)', fontFamily: 'monospace', marginTop: 4 }}>{joinCode}</div>
             </div>
           )}
 
-          {/* Tabs — only show if NOT from URL */}
           {!fromUrl && (
-            <div style={{ display: 'flex', background: '#f5f0ff', borderRadius: 50, padding: 4, marginBottom: 24, gap: 4 }}>
+            <div style={{ display: 'flex', background: '#f5f0ff', borderRadius: 50, padding: 4, marginBottom: 20, gap: 4 }}>
               {[['create','🏠 צור לובי'],['join','🚀 הצטרף']].map(([t, label]) => (
                 <button key={t} onClick={() => setTab(t)} style={{
                   flex: 1, padding: '10px 0', borderRadius: 50, border: 'none',
                   background: tab === t ? 'white' : 'transparent',
                   boxShadow: tab === t ? '0 2px 8px rgba(0,0,0,0.1)' : 'none',
-                  fontFamily: 'Heebo, sans-serif', fontWeight: 700, fontSize: 15,
+                  fontFamily: 'Heebo, sans-serif', fontWeight: 700, fontSize: 14,
                   cursor: 'pointer', color: tab === t ? 'var(--primary)' : '#888',
                   transition: 'all 0.2s',
                 }}>{label}</button>
@@ -84,9 +81,8 @@ export default function Home() {
             </div>
           )}
 
-          {/* Name */}
-          <div style={{ marginBottom: 16 }}>
-            <label style={{ fontSize: 13, fontWeight: 700, color: '#888', display: 'block', marginBottom: 6 }}>🙋 השם שלך</label>
+          <div style={{ marginBottom: 14 }}>
+            <label style={{ fontSize: 12, fontWeight: 700, color: '#888', display: 'block', marginBottom: 6 }}>🙋 השם שלך</label>
             <input
               className="input"
               value={nameInput}
@@ -95,14 +91,13 @@ export default function Home() {
               placeholder="שם שחקן..."
               maxLength={16}
               style={{ fontSize: 17, fontWeight: 700 }}
-              autoFocus
+              autoFocus={!isMobile}
             />
           </div>
 
-          {/* Join code — only in join tab / from URL */}
           {(tab === 'join' || fromUrl) && !fromUrl && (
-            <div style={{ marginBottom: 16 }}>
-              <label style={{ fontSize: 13, fontWeight: 700, color: '#888', display: 'block', marginBottom: 6 }}>🔑 קוד הלובי</label>
+            <div style={{ marginBottom: 14 }}>
+              <label style={{ fontSize: 12, fontWeight: 700, color: '#888', display: 'block', marginBottom: 6 }}>🔑 קוד הלובי</label>
               <input
                 className="input"
                 value={joinCode}
@@ -115,13 +110,11 @@ export default function Home() {
             </div>
           )}
 
-          {/* Skin customizer */}
-          <div style={{ marginBottom: 20 }}>
-            <label style={{ fontSize: 13, fontWeight: 700, color: '#888', display: 'block', marginBottom: 10 }}>🎨 עצב את הדמות שלך</label>
+          <div style={{ marginBottom: 18 }}>
+            <label style={{ fontSize: 12, fontWeight: 700, color: '#888', display: 'block', marginBottom: 10 }}>🎨 עצב את הדמות שלך</label>
             <SkinCustomizer skin={skin} onChange={setSkin} />
           </div>
 
-          {/* Action button */}
           {(tab === 'create' && !fromUrl) ? (
             <button className="btn btn-primary btn-lg" style={{ width: '100%' }} onClick={handleCreate} disabled={!nameInput.trim()}>
               🏠 צור לובי חדש
@@ -133,7 +126,7 @@ export default function Home() {
           )}
         </div>
 
-        <p style={{ marginTop: 16, color: '#bbb', fontSize: 13 }}>עד 20 שחקנים בלובי אחד 🎉</p>
+        <p style={{ marginTop: 14, color: '#bbb', fontSize: 12 }}>עד 20 שחקנים בלובי אחד 🎉</p>
       </div>
     </div>
   );

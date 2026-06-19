@@ -4,6 +4,7 @@ import DrawingCanvas from '../components/DrawingCanvas';
 import Chat from '../components/Chat';
 import PlayerList from '../components/PlayerList';
 import PlayerAvatar from '../components/PlayerAvatar';
+import { useIsMobile } from '../utils/useIsMobile';
 
 function RoundOverlay({ result, onDone }) {
   useEffect(() => {
@@ -28,8 +29,8 @@ function GameOverScreen() {
   const winner = state.winner;
 
   return (
-    <div style={{ position: 'fixed', inset: 0, background: 'linear-gradient(135deg, var(--dark), #1a1f3d)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 200 }}>
-      <div style={{ textAlign: 'center', color: 'white', padding: 40 }}>
+    <div style={{ position: 'fixed', inset: 0, background: 'linear-gradient(135deg, var(--dark), #1a1f3d)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 200, overflowY: 'auto' }}>
+      <div style={{ textAlign: 'center', color: 'white', padding: 40, width: '100%', maxWidth: 500 }}>
         <div style={{ fontSize: 80, marginBottom: 16 }}>🏆</div>
         <h1 style={{ fontSize: 40, fontWeight: 900, marginBottom: 8 }}>המשחק נגמר!</h1>
         {winner && (
@@ -44,7 +45,6 @@ function GameOverScreen() {
             </div>
           </div>
         )}
-        {/* Scoreboard */}
         <div style={{ background: 'rgba(255,255,255,0.08)', borderRadius: 20, padding: 20, marginBottom: 32, minWidth: 300 }}>
           <h3 style={{ marginBottom: 16, color: 'rgba(255,255,255,0.7)' }}>טבלת ניקוד</h3>
           {state.players.map((p, i) => (
@@ -66,8 +66,10 @@ function GameOverScreen() {
 
 export default function Game() {
   const { state } = useGame();
+  const isMobile = useIsMobile();
   const myId = state.socket?.id;
   const [showRoundEnd, setShowRoundEnd] = useState(false);
+  const [mobileTab, setMobileTab] = useState('canvas'); // canvas | chat | players
 
   const isDrawer = state.currentDrawer === myId;
   const imOwner = state.owner === myId;
@@ -92,53 +94,92 @@ export default function Game() {
 
   const drawerPlayer = state.players.find(p => p.id === state.currentDrawer);
 
-  return (
-    <div style={{ display: 'flex', flexDirection: 'column', height: '100vh', background: 'linear-gradient(135deg, #FFF5E4, #f0ebff)', overflow: 'hidden' }}>
-      {/* Top bar */}
-      <div style={{ background: 'white', borderBottom: '3px solid #f0ebff', padding: '10px 20px', display: 'flex', alignItems: 'center', gap: 16, flexShrink: 0, flexWrap: 'wrap' }}>
-        {/* Round */}
-        <div style={{ background: '#f5f0ff', borderRadius: 50, padding: '6px 16px', fontWeight: 800, fontSize: 14, color: 'var(--dark)' }}>
-          סיבוב {state.round}/{state.totalRounds}
-        </div>
+  // ── Top bar (shared) ──────────────────────────────────────────
+  const topBar = (
+    <div style={{ background: 'white', borderBottom: '3px solid #f0ebff', padding: isMobile ? '8px 12px' : '10px 20px', display: 'flex', alignItems: 'center', gap: isMobile ? 8 : 16, flexShrink: 0 }}>
+      <div style={{ background: '#f5f0ff', borderRadius: 50, padding: isMobile ? '4px 10px' : '6px 16px', fontWeight: 800, fontSize: isMobile ? 12 : 14, color: 'var(--dark)', whiteSpace: 'nowrap' }}>
+        {state.round}/{state.totalRounds}
+      </div>
 
-        {/* Word */}
-        <div style={{ flex: 1, textAlign: 'center' }}>
-          {state.currentDrawer ? (
-            <>
-              <div style={{ fontSize: 11, color: '#aaa', fontWeight: 600, marginBottom: 2 }}>
-                {isDrawer ? '✏️ המילה שלך לציור:' : imSpectator && imOwner ? '👁️ המילה (צופה):' : `🎨 ${state.drawerName} מציירr:`}
-              </div>
-              <div style={{ fontSize: 22, fontWeight: 900, letterSpacing: isDrawer || (imOwner && imSpectator) ? 3 : 10, color: isDrawer ? 'var(--primary)' : 'var(--dark)', direction: 'rtl' }}>
-                {wordDisplay()}
-              </div>
-            </>
-          ) : (
-            <div style={{ fontSize: 16, color: '#aaa', fontWeight: 600 }}>🎮 המשחק מתחיל...</div>
-          )}
-        </div>
-
-        {/* Timer */}
-        <div style={{ textAlign: 'center', minWidth: 100 }}>
-          <div style={{ fontSize: isDanger ? 28 : 22, fontWeight: 900, color: isDanger ? 'var(--error)' : 'var(--dark)', transition: 'all 0.3s', ...(isDanger ? { animation: 'pulse 0.5s ease-in-out infinite' } : {}) }}>
-            ⏱️ {state.timeLeft}
-          </div>
-          <div className="timer-bar-wrap" style={{ marginTop: 4, width: 100 }}>
-            <div className={`timer-bar ${isDanger ? 'danger' : ''}`} style={{ width: `${timePercent}%` }}/>
-          </div>
-        </div>
-
-        {/* Scores summary */}
-        {drawerPlayer && (
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8, background: '#f8f6ff', borderRadius: 50, padding: '6px 14px' }}>
-            <PlayerAvatar skin={drawerPlayer.skin} size={28}/>
-            <span style={{ fontSize: 13, fontWeight: 700 }}>{drawerPlayer.name} מציירr</span>
-          </div>
+      <div style={{ flex: 1, textAlign: 'center', minWidth: 0 }}>
+        {state.currentDrawer ? (
+          <>
+            <div style={{ fontSize: isMobile ? 10 : 11, color: '#aaa', fontWeight: 600, marginBottom: 1 }}>
+              {isDrawer ? '✏️ המילה:' : `🎨 ${state.drawerName}:`}
+            </div>
+            <div style={{ fontSize: isMobile ? 16 : 22, fontWeight: 900, letterSpacing: isDrawer || (imOwner && imSpectator) ? 2 : 8, color: isDrawer ? 'var(--primary)' : 'var(--dark)', direction: 'rtl', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+              {wordDisplay()}
+            </div>
+          </>
+        ) : (
+          <div style={{ fontSize: 14, color: '#aaa', fontWeight: 600 }}>🎮 מתחיל...</div>
         )}
       </div>
 
-      {/* Main content */}
+      <div style={{ textAlign: 'center', flexShrink: 0 }}>
+        <div style={{ fontSize: isDanger ? (isMobile ? 20 : 28) : (isMobile ? 16 : 22), fontWeight: 900, color: isDanger ? 'var(--error)' : 'var(--dark)', transition: 'all 0.3s', ...(isDanger ? { animation: 'pulse 0.5s ease-in-out infinite' } : {}) }}>
+          ⏱️ {state.timeLeft}
+        </div>
+        <div className="timer-bar-wrap" style={{ marginTop: 2, width: isMobile ? 60 : 100 }}>
+          <div className={`timer-bar ${isDanger ? 'danger' : ''}`} style={{ width: `${timePercent}%` }}/>
+        </div>
+      </div>
+    </div>
+  );
+
+  // ── Mobile layout ──────────────────────────────────────────
+  if (isMobile) {
+    return (
+      <div style={{ display: 'flex', flexDirection: 'column', height: '100vh', background: '#f5f0ff', overflow: 'hidden' }}>
+        {topBar}
+
+        {/* Mobile tab bar */}
+        <div style={{ display: 'flex', background: 'white', borderBottom: '2px solid #f0ebff', flexShrink: 0 }}>
+          {[['canvas', isDrawer ? '🖌️ ציור' : '🖼️ ציור'], ['chat', '💬 ניחושים'], ['players', '👥 שחקנים']].map(([t, label]) => (
+            <button key={t} onClick={() => setMobileTab(t)} style={{
+              flex: 1, padding: '9px 4px', border: 'none',
+              borderBottom: mobileTab === t ? '3px solid var(--primary)' : '3px solid transparent',
+              background: 'white', color: mobileTab === t ? 'var(--primary)' : '#888',
+              fontFamily: 'Heebo, sans-serif', fontWeight: 700, fontSize: 12, cursor: 'pointer',
+            }}>{label}</button>
+          ))}
+        </div>
+
+        {/* Mobile content */}
+        <div style={{ flex: 1, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
+          {mobileTab === 'canvas' && (
+            <div style={{ flex: 1, padding: '8px', overflow: 'hidden' }}>
+              <DrawingCanvas isDrawer={isDrawer} isMobile={true}/>
+            </div>
+          )}
+          {mobileTab === 'chat' && (
+            <div style={{ flex: 1, overflow: 'hidden', padding: '8px' }}>
+              <Chat isDrawer={isDrawer}/>
+            </div>
+          )}
+          {mobileTab === 'players' && (
+            <div style={{ flex: 1, overflowY: 'auto', padding: '8px' }}>
+              <div style={{ background: 'white', borderRadius: 16, padding: 14 }}>
+                <PlayerList showScores={true}/>
+              </div>
+            </div>
+          )}
+        </div>
+
+        {showRoundEnd && state.roundResult && (
+          <RoundOverlay result={state.roundResult} onDone={() => setShowRoundEnd(false)}/>
+        )}
+        {state.gameState === 'ended' && <GameOverScreen/>}
+      </div>
+    );
+  }
+
+  // ── Desktop layout ──────────────────────────────────────────
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', height: '100vh', background: 'linear-gradient(135deg, #FFF5E4, #f0ebff)', overflow: 'hidden' }}>
+      {topBar}
+
       <div style={{ flex: 1, display: 'flex', gap: 12, padding: '12px 16px', overflow: 'hidden' }}>
-        {/* Player list sidebar */}
         <div style={{ width: 200, flexShrink: 0, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 8 }}>
           <div style={{ background: 'white', borderRadius: 16, padding: '12px', boxShadow: '0 2px 12px rgba(0,0,0,0.06)' }}>
             <div style={{ fontSize: 12, fontWeight: 800, color: '#888', marginBottom: 10 }}>👥 שחקנים</div>
@@ -146,21 +187,17 @@ export default function Game() {
           </div>
         </div>
 
-        {/* Canvas area */}
         <div style={{ flex: 1, display: 'flex', gap: 12, overflow: 'hidden', minWidth: 0 }}>
-          {/* Canvas */}
           <div style={{ flex: ownerIsSpectator && !isDrawer ? '1' : '1.4', overflow: 'hidden' }}>
             <DrawingCanvas isDrawer={isDrawer}/>
           </div>
 
-          {/* Chat - shown to everyone except solo drawer when owner is spectator */}
           {!isDrawer && (
             <div style={{ width: 280, flexShrink: 0 }}>
               <Chat isDrawer={false}/>
             </div>
           )}
 
-          {/* Drawer also gets mini chat (read only to see guesses) */}
           {isDrawer && (
             <div style={{ width: 240, flexShrink: 0 }}>
               <div style={{ background: 'white', borderRadius: 16, padding: 14, height: '100%', boxShadow: '0 2px 12px rgba(0,0,0,0.06)', overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
@@ -185,12 +222,9 @@ export default function Game() {
         </div>
       </div>
 
-      {/* Round end overlay */}
       {showRoundEnd && state.roundResult && (
         <RoundOverlay result={state.roundResult} onDone={() => setShowRoundEnd(false)}/>
       )}
-
-      {/* Game over */}
       {state.gameState === 'ended' && <GameOverScreen/>}
     </div>
   );

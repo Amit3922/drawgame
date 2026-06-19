@@ -6,12 +6,12 @@ const COLORS = [
   '#4ECDC4','#45B7D1','#2D3561','#C7B8EA','#FF8FAB','#A0522D',
 ];
 
-export default function DrawingCanvas({ isDrawer, size }) {
+export default function DrawingCanvas({ isDrawer, isMobile }) {
   const canvasRef = useRef(null);
   const { state } = useGame();
   const [color, setColor] = useState('#000000');
   const [brushSize, setBrushSize] = useState(6);
-  const [tool, setTool] = useState('pen'); // pen | eraser
+  const [tool, setTool] = useState('pen');
   const drawing = useRef(false);
   const lastPos = useRef(null);
 
@@ -38,7 +38,6 @@ export default function DrawingCanvas({ isDrawer, size }) {
     ctx.stroke();
   }, []);
 
-  // Handle incoming draw events from socket
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
@@ -46,10 +45,8 @@ export default function DrawingCanvas({ isDrawer, size }) {
 
     const handleDraw = (data) => {
       drawLine(ctx,
-        data.prevX * canvas.width,
-        data.prevY * canvas.height,
-        data.x * canvas.width,
-        data.y * canvas.height,
+        data.prevX * canvas.width, data.prevY * canvas.height,
+        data.x * canvas.width, data.y * canvas.height,
         data.color, data.brushSize, data.erase
       );
     };
@@ -69,7 +66,6 @@ export default function DrawingCanvas({ isDrawer, size }) {
     }
   }, [state.socket, drawLine]);
 
-  // Init canvas white
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
@@ -93,25 +89,17 @@ export default function DrawingCanvas({ isDrawer, size }) {
     const ctx = canvas.getContext('2d');
     const pos = getPos(e, canvas);
     const prev = lastPos.current || pos;
-
     const erase = tool === 'eraser';
     drawLine(ctx, prev.x, prev.y, pos.x, pos.y, color, brushSize, erase);
-
     state.socket.emit('draw', {
-      prevX: prev.x / canvas.width,
-      prevY: prev.y / canvas.height,
-      x: pos.x / canvas.width,
-      y: pos.y / canvas.height,
+      prevX: prev.x / canvas.width, prevY: prev.y / canvas.height,
+      x: pos.x / canvas.width, y: pos.y / canvas.height,
       color, brushSize, erase,
     });
-
     lastPos.current = pos;
   };
 
-  const endDraw = () => {
-    drawing.current = false;
-    lastPos.current = null;
-  };
+  const endDraw = () => { drawing.current = false; lastPos.current = null; };
 
   const clearCanvas = () => {
     const canvas = canvasRef.current;
@@ -121,9 +109,64 @@ export default function DrawingCanvas({ isDrawer, size }) {
     state.socket.emit('clear-canvas');
   };
 
+  // ── Mobile tools (compact 2-row layout) ──────────────────────
+  const mobileTools = isDrawer && (
+    <div style={{ background: 'white', borderRadius: 12, padding: '8px 10px', boxShadow: '0 2px 12px rgba(0,0,0,0.08)', flexShrink: 0 }}>
+      {/* Row 1: colors */}
+      <div style={{ display: 'flex', gap: 5, alignItems: 'center', marginBottom: 8, flexWrap: 'wrap' }}>
+        {COLORS.map(c => (
+          <button key={c} onClick={() => { setColor(c); setTool('pen'); }} style={{
+            width: 24, height: 24, background: c, border: color === c && tool === 'pen' ? '3px solid var(--dark)' : '2px solid #e0e0e0',
+            borderRadius: '50%', cursor: 'pointer', flexShrink: 0,
+            boxShadow: color === c && tool === 'pen' ? '0 0 0 2px white inset' : 'none',
+          }}/>
+        ))}
+        <input type="color" value={color} onChange={e => { setColor(e.target.value); setTool('pen'); }}
+          style={{ width: 24, height: 24, border: '2px solid #e0e0e0', borderRadius: '50%', cursor: 'pointer', padding: 1 }}/>
+      </div>
+      {/* Row 2: tools + brush size */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+        <button onClick={() => setTool('pen')} style={{ padding: '5px 10px', borderRadius: 50, border: tool === 'pen' ? '2px solid var(--primary)' : '2px solid #e8e0f0', background: tool === 'pen' ? '#FFE8DF' : 'white', cursor: 'pointer', fontSize: 12, fontWeight: 700, fontFamily: 'Heebo, sans-serif', color: tool === 'pen' ? 'var(--primary)' : '#666' }}>✏️</button>
+        <button onClick={() => setTool('eraser')} style={{ padding: '5px 10px', borderRadius: 50, border: tool === 'eraser' ? '2px solid var(--primary)' : '2px solid #e8e0f0', background: tool === 'eraser' ? '#FFE8DF' : 'white', cursor: 'pointer', fontSize: 12, fontWeight: 700, fontFamily: 'Heebo, sans-serif', color: tool === 'eraser' ? 'var(--primary)' : '#666' }}>🧹</button>
+        <button onClick={clearCanvas} style={{ padding: '5px 10px', borderRadius: 50, border: '2px solid #e8e0f0', background: 'white', cursor: 'pointer', fontSize: 12, fontWeight: 700, fontFamily: 'Heebo, sans-serif', color: '#e55' }}>🗑️</button>
+        <div style={{ flex: 1, display: 'flex', alignItems: 'center', gap: 6 }}>
+          <input type="range" min={2} max={30} value={brushSize} onChange={e => setBrushSize(Number(e.target.value))} style={{ flex: 1, accentColor: 'var(--primary)' }}/>
+          <span style={{ fontSize: 11, fontWeight: 700, color: '#666', minWidth: 18 }}>{brushSize}</span>
+        </div>
+      </div>
+    </div>
+  );
+
+  // ── Desktop tools ──────────────────────────────────────────
+  const desktopTools = isDrawer && (
+    <div style={{ background: 'white', borderRadius: 16, padding: '10px 14px', boxShadow: '0 2px 12px rgba(0,0,0,0.08)', display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap' }}>
+      <div style={{ display: 'flex', gap: 5, flexWrap: 'wrap' }}>
+        {COLORS.map(c => (
+          <button key={c} onClick={() => { setColor(c); setTool('pen'); }} style={{
+            width: 26, height: 26, background: c, border: color === c && tool === 'pen' ? '3px solid var(--dark)' : '2px solid #e0e0e0',
+            borderRadius: '50%', cursor: 'pointer', boxShadow: color === c && tool === 'pen' ? '0 0 0 2px white inset' : 'none', transition: 'transform 0.1s',
+          }}
+            onMouseEnter={e => e.currentTarget.style.transform = 'scale(1.2)'}
+            onMouseLeave={e => e.currentTarget.style.transform = 'scale(1)'}
+          />
+        ))}
+        <input type="color" value={color} onChange={e => { setColor(e.target.value); setTool('pen'); }} style={{ width: 26, height: 26, border: '2px solid #e0e0e0', borderRadius: '50%', cursor: 'pointer', padding: 1 }} title="צבע מותאם"/>
+      </div>
+      <div style={{ width: 1, height: 30, background: '#e8e0f0' }}/>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+        <span style={{ fontSize: 13, color: '#888', fontWeight: 600 }}>🖊️</span>
+        <input type="range" min={2} max={30} value={brushSize} onChange={e => setBrushSize(Number(e.target.value))} style={{ width: 80, accentColor: 'var(--primary)' }}/>
+        <span style={{ fontSize: 12, fontWeight: 700, color: '#666', minWidth: 20 }}>{brushSize}</span>
+      </div>
+      <div style={{ width: 1, height: 30, background: '#e8e0f0' }}/>
+      <button onClick={() => setTool('pen')} style={{ padding: '6px 14px', borderRadius: 50, border: tool === 'pen' ? '2px solid var(--primary)' : '2px solid #e8e0f0', background: tool === 'pen' ? '#FFE8DF' : 'white', cursor: 'pointer', fontSize: 14, fontWeight: 700, fontFamily: 'Heebo, sans-serif', color: tool === 'pen' ? 'var(--primary)' : '#666' }}>✏️ עט</button>
+      <button onClick={() => setTool('eraser')} style={{ padding: '6px 14px', borderRadius: 50, border: tool === 'eraser' ? '2px solid var(--primary)' : '2px solid #e8e0f0', background: tool === 'eraser' ? '#FFE8DF' : 'white', cursor: 'pointer', fontSize: 14, fontWeight: 700, fontFamily: 'Heebo, sans-serif', color: tool === 'eraser' ? 'var(--primary)' : '#666' }}>🧹 מחק</button>
+      <button onClick={clearCanvas} style={{ padding: '6px 14px', borderRadius: 50, border: '2px solid #e8e0f0', background: 'white', cursor: 'pointer', fontSize: 14, fontWeight: 700, fontFamily: 'Heebo, sans-serif', color: '#e55' }}>🗑️ נקה</button>
+    </div>
+  );
+
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 10, height: '100%' }}>
-      {/* Canvas */}
+    <div style={{ display: 'flex', flexDirection: 'column', gap: isMobile ? 8 : 10, height: '100%' }}>
       <div style={{ flex: 1, position: 'relative', background: '#fff', borderRadius: 16, overflow: 'hidden', boxShadow: '0 4px 24px rgba(0,0,0,0.12)', border: '3px solid #e8e0f0' }}>
         <canvas
           ref={canvasRef}
@@ -144,68 +187,7 @@ export default function DrawingCanvas({ isDrawer, size }) {
           </div>
         )}
       </div>
-
-      {/* Tools */}
-      {isDrawer && (
-        <div style={{ background: 'white', borderRadius: 16, padding: '10px 14px', boxShadow: '0 2px 12px rgba(0,0,0,0.08)', display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap' }}>
-          {/* Color Palette */}
-          <div style={{ display: 'flex', gap: 5, flexWrap: 'wrap' }}>
-            {COLORS.map(c => (
-              <button
-                key={c}
-                onClick={() => { setColor(c); setTool('pen'); }}
-                style={{
-                  width: 26, height: 26,
-                  background: c,
-                  border: color === c && tool === 'pen' ? '3px solid var(--dark)' : '2px solid #e0e0e0',
-                  borderRadius: '50%',
-                  cursor: 'pointer',
-                  boxShadow: color === c && tool === 'pen' ? '0 0 0 2px white inset' : 'none',
-                  transition: 'transform 0.1s',
-                }}
-                onMouseEnter={e => e.currentTarget.style.transform = 'scale(1.2)'}
-                onMouseLeave={e => e.currentTarget.style.transform = 'scale(1)'}
-              />
-            ))}
-            <input
-              type="color"
-              value={color}
-              onChange={e => { setColor(e.target.value); setTool('pen'); }}
-              style={{ width: 26, height: 26, border: '2px solid #e0e0e0', borderRadius: '50%', cursor: 'pointer', padding: 1 }}
-              title="צבע מותאם"
-            />
-          </div>
-
-          <div style={{ width: 1, height: 30, background: '#e8e0f0' }}/>
-
-          {/* Brush size */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-            <span style={{ fontSize: 13, color: '#888', fontWeight: 600 }}>🖊️</span>
-            <input
-              type="range" min={2} max={30} value={brushSize}
-              onChange={e => setBrushSize(Number(e.target.value))}
-              style={{ width: 80, accentColor: 'var(--primary)' }}
-            />
-            <span style={{ fontSize: 12, fontWeight: 700, color: '#666', minWidth: 20 }}>{brushSize}</span>
-          </div>
-
-          <div style={{ width: 1, height: 30, background: '#e8e0f0' }}/>
-
-          {/* Tool buttons */}
-          <button
-            onClick={() => setTool('pen')}
-            style={{ padding: '6px 14px', borderRadius: 50, border: tool === 'pen' ? '2px solid var(--primary)' : '2px solid #e8e0f0', background: tool === 'pen' ? '#FFE8DF' : 'white', cursor: 'pointer', fontSize: 14, fontWeight: 700, fontFamily: 'Heebo, sans-serif', color: tool === 'pen' ? 'var(--primary)' : '#666' }}
-          >✏️ עט</button>
-          <button
-            onClick={() => setTool('eraser')}
-            style={{ padding: '6px 14px', borderRadius: 50, border: tool === 'eraser' ? '2px solid var(--primary)' : '2px solid #e8e0f0', background: tool === 'eraser' ? '#FFE8DF' : 'white', cursor: 'pointer', fontSize: 14, fontWeight: 700, fontFamily: 'Heebo, sans-serif', color: tool === 'eraser' ? 'var(--primary)' : '#666' }}
-          >🧹 מחק</button>
-          <button
-            onClick={clearCanvas}
-            style={{ padding: '6px 14px', borderRadius: 50, border: '2px solid #e8e0f0', background: 'white', cursor: 'pointer', fontSize: 14, fontWeight: 700, fontFamily: 'Heebo, sans-serif', color: '#e55' }}
-          >🗑️ נקה</button>
-        </div>
-      )}
+      {isMobile ? mobileTools : desktopTools}
     </div>
   );
 }
