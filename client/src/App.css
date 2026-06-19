@@ -23,7 +23,6 @@
 
 html, body, #root {
   height: 100%;
-  /* Use dvh on supporting browsers (excludes mobile address bar) */
   height: 100dvh;
   direction: rtl;
   overflow: hidden;
@@ -35,6 +34,11 @@ body {
   color: var(--text);
   overflow: hidden;
   max-width: 100vw;
+  /* Push content below iPhone Dynamic Island / notch */
+  padding-top: env(safe-area-inset-top);
+  padding-bottom: env(safe-area-inset-bottom);
+  padding-left: env(safe-area-inset-left);
+  padding-right: env(safe-area-inset-right);
 }
 
 /* ──── Buttons ──── */
