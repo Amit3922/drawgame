@@ -86,9 +86,7 @@ export default function Game() {
   const imSpectator = myPlayer?.isSpectator || false;
 
   const wordDisplay = () => {
-    if (isDrawer || (imOwner && imSpectator && state.myWord)) {
-      return state.myWord || state.maskedWord || '';
-    }
+    if (isDrawer) return state.myWord || state.maskedWord || '';
     return state.maskedWord || '';
   };
 

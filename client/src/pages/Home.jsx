@@ -9,6 +9,12 @@ export default function Home() {
   const [joinCode, setJoinCode] = useState('');
   const [nameInput, setNameInput] = useState(state.playerName || '');
   const [fromUrl, setFromUrl] = useState(false);
+  const [loading, setLoading] = useState(false);
+
+  // Clear loading if the server returns an error
+  useEffect(() => {
+    if (state.error) setLoading(false);
+  }, [state.error]);
 
   useEffect(() => {
     const path = window.location.pathname;
@@ -26,7 +32,8 @@ export default function Home() {
 
   const handleCreate = () => {
     const name = nameInput.trim();
-    if (!name) return;
+    if (!name || loading) return;
+    setLoading(true);
     dispatch({ type: 'SET_NAME', name });
     state.socket.emit('create-lobby', { playerName: name, skin: defaultSkin, deviceId: state.socket._deviceId });
   };
@@ -34,13 +41,14 @@ export default function Home() {
   const handleJoin = () => {
     const name = nameInput.trim();
     const code = joinCode.trim().toUpperCase();
-    if (!name || code.length !== 6) return;
+    if (!name || code.length !== 6 || loading) return;
+    setLoading(true);
     dispatch({ type: 'SET_NAME', name });
     state.socket.emit('join-lobby', { code, playerName: name, skin: defaultSkin, deviceId: state.socket._deviceId });
   };
 
   const isCreate = tab === 'create' && !fromUrl;
-  const canSubmit = isCreate ? !!nameInput.trim() : (!!nameInput.trim() && joinCode.length === 6);
+  const canSubmit = (isCreate ? !!nameInput.trim() : (!!nameInput.trim() && joinCode.length === 6)) && !loading;
 
   const decos = ['🎨','✏️','🖌️','🎭','🌈','⭐','🦄','🎉','🎊','🎪'];
 
@@ -123,11 +131,11 @@ export default function Home() {
           {/* Submit button */}
           <button
             className={`btn btn-lg ${isCreate ? 'btn-primary' : 'btn-accent'}`}
-            style={{ width: '100%', marginTop: 4 }}
+            style={{ width: '100%', marginTop: 4, opacity: loading ? 0.7 : 1 }}
             onClick={isCreate ? handleCreate : handleJoin}
             disabled={!canSubmit}
           >
-            {isCreate ? '🏠 צור לובי חדש' : '🚀 הצטרף למשחק!'}
+            {loading ? '⏳ מתחבר...' : isCreate ? '🏠 צור לובי חדש' : '🚀 הצטרף למשחק!'}
           </button>
 
           <p style={{ textAlign: 'center', marginTop: 14, color: '#bbb', fontSize: 12 }}>
