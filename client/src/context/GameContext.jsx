@@ -184,7 +184,15 @@ export function GameProvider({ children }) {
   useEffect(() => { stateRef.current = state; }, [state]);
 
   useEffect(() => {
+    // Stable device ID so same phone can't join the same room twice
+    let deviceId = localStorage.getItem('drawgame_device_id');
+    if (!deviceId) {
+      deviceId = Math.random().toString(36).slice(2) + Date.now().toString(36);
+      localStorage.setItem('drawgame_device_id', deviceId);
+    }
+
     const socket = io('/', { path: '/socket.io', transports: ['websocket', 'polling'] });
+    socket._deviceId = deviceId;
     dispatch({ type: 'SET_SOCKET', socket });
 
     // On connect / reconnect — try to restore session from localStorage

@@ -14,7 +14,7 @@ export default function Lobby() {
   const [showQR, setShowQR] = useState(false);
   const [qrDataUrl, setQrDataUrl] = useState(null);
   const [copied, setCopied] = useState(false);
-  const [activeTab, setActiveTab] = useState('skin'); // mobile tabs: skin | settings | players
+  const [activeTab, setActiveTab] = useState('players'); // mobile tabs: players | skin | settings
   const myId = state.socket?.id;
 
   const joinUrl = `${window.location.origin}/join/${state.lobbyCode}`;
@@ -80,7 +80,7 @@ export default function Lobby() {
 
         {/* Mobile tab bar */}
         <div style={{ display: 'flex', background: 'white', borderBottom: '2px solid #f0ebff', flexShrink: 0 }}>
-          {[['skin','🎨 דמות'], ['players','👥 שחקנים'], ...(state.isOwner ? [['settings','⚙️ הגדרות']] : [])].map(([t, label]) => (
+          {[['players','👥 שחקנים'], ['skin','🎨 דמות'], ...(state.isOwner ? [['settings','⚙️ הגדרות']] : [])].map(([t, label]) => (
             <button key={t} onClick={() => setActiveTab(t)} style={{
               flex: 1, padding: '10px 4px', border: 'none', borderBottom: activeTab === t ? '3px solid var(--primary)' : '3px solid transparent',
               background: 'white', color: activeTab === t ? 'var(--primary)' : '#888',

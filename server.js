@@ -149,11 +149,11 @@ function endGame(code) {
 }
 
 io.on('connection', socket => {
-  socket.on('create-lobby', ({ playerName, skin }) => {
+  socket.on('create-lobby', ({ playerName, skin, deviceId }) => {
     let code;
     do { code = genCode(); } while (rooms.has(code));
 
-    const player = { id: socket.id, name: playerName, skin, isOwner: true, isSpectator: false };
+    const player = { id: socket.id, name: playerName, skin, isOwner: true, isSpectator: false, deviceId: deviceId || null };
     const room = {
       code, owner: socket.id,
       players: [player],
@@ -171,14 +171,15 @@ io.on('connection', socket => {
     socket.emit('lobby-created', { code, players: room.players, settings: room.settings, owner: room.owner });
   });
 
-  socket.on('join-lobby', ({ code, playerName, skin }) => {
+  socket.on('join-lobby', ({ code, playerName, skin, deviceId }) => {
     const room = rooms.get(code);
     if (!room) return socket.emit('error', { msg: 'החדר לא נמצא 😢' });
     if (room.gameState !== 'lobby') return socket.emit('error', { msg: 'המשחק כבר התחיל!' });
     if (room.players.length >= 20) return socket.emit('error', { msg: 'החדר מלא! (מקסימום 20)' });
     if (room.players.find(p => p.name === playerName)) return socket.emit('error', { msg: 'שם השחקן כבר תפוס!' });
+    if (deviceId && room.players.find(p => p.deviceId === deviceId)) return socket.emit('error', { msg: 'המכשיר הזה כבר בלובי!' });
 
-    const player = { id: socket.id, name: playerName, skin, isOwner: false, isSpectator: false };
+    const player = { id: socket.id, name: playerName, skin, isOwner: false, isSpectator: false, deviceId: deviceId || null };
     room.players.push(player);
     socket.join(code);
     socket.roomCode = code;
