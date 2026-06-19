@@ -94,44 +94,84 @@ export default function Game() {
 
   const drawerPlayer = state.players.find(p => p.id === state.currentDrawer);
 
-  // ── Top bar (shared) ──────────────────────────────────────────
+  // ── Top bar (desktop only) ──────────────────────────────────────────
   const topBar = (
-    <div style={{ background: 'white', borderBottom: '3px solid #f0ebff', padding: isMobile ? '8px 12px' : '10px 20px', display: 'flex', alignItems: 'center', gap: isMobile ? 8 : 16, flexShrink: 0 }}>
-      <div style={{ background: '#f5f0ff', borderRadius: 50, padding: isMobile ? '4px 10px' : '6px 16px', fontWeight: 800, fontSize: isMobile ? 12 : 14, color: 'var(--dark)', whiteSpace: 'nowrap' }}>
-        {state.round}/{state.totalRounds}
+    <div style={{ background: 'white', borderBottom: '3px solid #f0ebff', padding: '10px 20px', display: 'flex', alignItems: 'center', gap: 16, flexShrink: 0 }}>
+      <div style={{ background: '#f5f0ff', borderRadius: 50, padding: '6px 16px', fontWeight: 800, fontSize: 14, color: 'var(--dark)', whiteSpace: 'nowrap' }}>
+        סיבוב {state.round}/{state.totalRounds}
       </div>
-
       <div style={{ flex: 1, textAlign: 'center', minWidth: 0 }}>
         {state.currentDrawer ? (
           <>
-            <div style={{ fontSize: isMobile ? 10 : 11, color: '#aaa', fontWeight: 600, marginBottom: 1 }}>
-              {isDrawer ? '✏️ המילה:' : `🎨 ${state.drawerName}:`}
+            <div style={{ fontSize: 11, color: '#aaa', fontWeight: 600, marginBottom: 2 }}>
+              {isDrawer ? '✏️ המילה שלך לציור:' : imSpectator && imOwner ? '👁️ המילה (צופה):' : `🎨 ${state.drawerName} מציירr:`}
             </div>
-            <div style={{ fontSize: isMobile ? 16 : 22, fontWeight: 900, letterSpacing: isDrawer || (imOwner && imSpectator) ? 2 : 8, color: isDrawer ? 'var(--primary)' : 'var(--dark)', direction: 'rtl', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+            <div style={{ fontSize: 22, fontWeight: 900, letterSpacing: isDrawer || (imOwner && imSpectator) ? 3 : 10, color: isDrawer ? 'var(--primary)' : 'var(--dark)', direction: 'rtl' }}>
               {wordDisplay()}
             </div>
           </>
         ) : (
-          <div style={{ fontSize: 14, color: '#aaa', fontWeight: 600 }}>🎮 מתחיל...</div>
+          <div style={{ fontSize: 16, color: '#aaa', fontWeight: 600 }}>🎮 המשחק מתחיל...</div>
         )}
       </div>
-
-      <div style={{ textAlign: 'center', flexShrink: 0 }}>
-        <div style={{ fontSize: isDanger ? (isMobile ? 20 : 28) : (isMobile ? 16 : 22), fontWeight: 900, color: isDanger ? 'var(--error)' : 'var(--dark)', transition: 'all 0.3s', ...(isDanger ? { animation: 'pulse 0.5s ease-in-out infinite' } : {}) }}>
+      <div style={{ textAlign: 'center', minWidth: 100 }}>
+        <div style={{ fontSize: isDanger ? 28 : 22, fontWeight: 900, color: isDanger ? 'var(--error)' : 'var(--dark)', transition: 'all 0.3s', ...(isDanger ? { animation: 'pulse 0.5s ease-in-out infinite' } : {}) }}>
           ⏱️ {state.timeLeft}
         </div>
-        <div className="timer-bar-wrap" style={{ marginTop: 2, width: isMobile ? 60 : 100 }}>
+        <div className="timer-bar-wrap" style={{ marginTop: 4, width: 100 }}>
           <div className={`timer-bar ${isDanger ? 'danger' : ''}`} style={{ width: `${timePercent}%` }}/>
         </div>
       </div>
     </div>
   );
 
+  // ── Mobile top bar (compact: round + timer) ──────────────────────────────────────────
+  const mobileTopBar = (
+    <div style={{ background: 'white', borderBottom: '2px solid #f0ebff', padding: '6px 12px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexShrink: 0 }}>
+      <div style={{ background: '#f5f0ff', borderRadius: 50, padding: '4px 12px', fontWeight: 800, fontSize: 13, color: 'var(--dark)' }}>
+        {state.round}/{state.totalRounds}
+      </div>
+      <div style={{ textAlign: 'center' }}>
+        <div style={{ fontSize: isDanger ? 22 : 18, fontWeight: 900, color: isDanger ? 'var(--error)' : 'var(--dark)', ...(isDanger ? { animation: 'pulse 0.5s ease-in-out infinite' } : {}) }}>
+          ⏱️ {state.timeLeft}
+        </div>
+        <div className="timer-bar-wrap" style={{ marginTop: 2, width: 80 }}>
+          <div className={`timer-bar ${isDanger ? 'danger' : ''}`} style={{ width: `${timePercent}%` }}/>
+        </div>
+      </div>
+    </div>
+  );
+
+  // ── Mobile word banner ──────────────────────────────────────────
+  const mobileWordBanner = state.currentDrawer ? (
+    <div style={{
+      flexShrink: 0,
+      background: isDrawer ? 'var(--primary)' : 'var(--dark)',
+      padding: '10px 16px',
+      textAlign: 'center',
+    }}>
+      <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.7)', fontWeight: 700, marginBottom: 3 }}>
+        {isDrawer ? '✏️ המילה שלך לציור:' : `🎨 ${state.drawerName} מציירr — נחש:`}
+      </div>
+      <div style={{
+        fontSize: isDrawer ? 28 : 22,
+        fontWeight: 900,
+        color: 'white',
+        letterSpacing: isDrawer ? 4 : 12,
+        direction: 'rtl',
+        wordBreak: 'break-all',
+      }}>
+        {wordDisplay()}
+      </div>
+    </div>
+  ) : null;
+
   // ── Mobile layout ──────────────────────────────────────────
   if (isMobile) {
     return (
       <div style={{ display: 'flex', flexDirection: 'column', height: '100dvh', minHeight: '100vh', background: '#f5f0ff', overflow: 'hidden' }}>
-        {topBar}
+        {mobileTopBar}
+        {mobileWordBanner}
 
         {/* Mobile tab bar */}
         <div style={{ display: 'flex', background: 'white', borderBottom: '2px solid #f0ebff', flexShrink: 0 }}>
