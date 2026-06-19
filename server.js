@@ -190,10 +190,16 @@ io.on('connection', socket => {
   // Rejoin after page refresh / reconnect
   socket.on('rejoin-lobby', ({ code, playerName, skin }) => {
     const room = rooms.get(code);
-    if (!room) return; // room gone, silently ignore
+    if (!room) {
+      socket.emit('rejoin-failed');
+      return;
+    }
 
     const player = room.players.find(p => p.name === playerName);
-    if (!player) return;
+    if (!player) {
+      socket.emit('rejoin-failed');
+      return;
+    }
 
     // Update old socket ID → new socket ID everywhere
     const oldId = player.id;

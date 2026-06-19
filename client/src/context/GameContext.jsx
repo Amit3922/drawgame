@@ -253,6 +253,11 @@ export function GameProvider({ children }) {
     socket.on('game-over', d => dispatch({ type: 'GAME_OVER', ...d }));
     socket.on('qr-code', d => dispatch({ type: 'QR_CODE', ...d }));
     socket.on('public-url', d => dispatch({ type: 'PUBLIC_URL', url: d.url }));
+    socket.on('rejoin-failed', () => {
+      localStorage.removeItem('drawgame_session');
+      dispatch({ type: 'SET_RECONNECTING', value: false });
+    });
+
     socket.on('error', d => {
       dispatch({ type: 'SET_RECONNECTING', value: false });
       dispatch({ type: 'SET_ERROR', error: d.msg });
