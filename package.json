@@ -1,0 +1,22 @@
+{
+  "name": "drawgame",
+  "version": "1.0.0",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "nodemon server.js",
+    "build": "cd client && npm install && npm run build",
+    "dev:client": "cd client && npm run dev",
+    "play": "npm run build && cross-env NODE_ENV=production node server.js",
+    "share": "npm run build && cross-env NODE_ENV=production TUNNEL=true node server.js"
+  },
+  "dependencies": {
+    "express": "^4.18.2",
+    "localtunnel": "^2.0.2",
+    "qrcode": "^1.5.3",
+    "socket.io": "^4.6.1"
+  },
+  "devDependencies": {
+    "cross-env": "^10.1.0",
+    "nodemon": "^3.0.1"
+  }
+}
