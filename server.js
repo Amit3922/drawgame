@@ -87,6 +87,19 @@ function startRound(code) {
 
   io.to(code).emit('clear-canvas');
 
+  // Send round-start FIRST (sets masked word for everyone), then your-word to drawer
+  // so that your-word (which sets the real word) is never overwritten by round-start
+  io.to(code).emit('round-start', {
+    drawer: room.currentDrawer,
+    drawerName: drawer.name,
+    drawerSkin: drawer.skin,
+    round: room.currentRound,
+    totalRounds: room.settings.rounds,
+    timeLimit: room.settings.timeLimit,
+    masked: maskWord(room.currentWord),
+    wordLen: room.currentWord.length
+  });
+
   io.to(room.currentDrawer).emit('your-word', {
     word: room.currentWord,
     masked: maskWord(room.currentWord)
@@ -100,17 +113,6 @@ function startRound(code) {
       spectating: true
     });
   }
-
-  io.to(code).emit('round-start', {
-    drawer: room.currentDrawer,
-    drawerName: drawer.name,
-    drawerSkin: drawer.skin,
-    round: room.currentRound,
-    totalRounds: room.settings.rounds,
-    timeLimit: room.settings.timeLimit,
-    masked: maskWord(room.currentWord),
-    wordLen: room.currentWord.length
-  });
 
   room.roundTimer = setTimeout(() => endRound(code), room.settings.timeLimit * 1000);
 }
@@ -183,6 +185,59 @@ io.on('connection', socket => {
 
     socket.emit('lobby-joined', { code, players: room.players, settings: room.settings, owner: room.owner });
     socket.to(code).emit('players-update', { players: room.players });
+  });
+
+  // Rejoin after page refresh / reconnect
+  socket.on('rejoin-lobby', ({ code, playerName, skin }) => {
+    const room = rooms.get(code);
+    if (!room) return; // room gone, silently ignore
+
+    const player = room.players.find(p => p.name === playerName);
+    if (!player) return;
+
+    // Update old socket ID → new socket ID everywhere
+    const oldId = player.id;
+    player.id = socket.id;
+    player.skin = skin;
+    if (room.owner === oldId) room.owner = socket.id;
+    if (room.currentDrawer === oldId) room.currentDrawer = socket.id;
+    if (room.scores[oldId] !== undefined) {
+      room.scores[socket.id] = room.scores[oldId];
+      delete room.scores[oldId];
+    }
+
+    socket.join(code);
+    socket.roomCode = code;
+
+    const timeLeft = room.gameState === 'playing'
+      ? Math.max(0, room.settings.timeLimit - Math.floor((Date.now() - room.roundStartTime) / 1000))
+      : room.settings.timeLimit;
+
+    const drawerPlayer = room.players.find(p => p.id === room.currentDrawer);
+
+    socket.emit('rejoined', {
+      code,
+      players: room.players,
+      settings: room.settings,
+      owner: room.owner,
+      gameState: room.gameState,
+      currentDrawer: room.currentDrawer,
+      drawerName: drawerPlayer?.name || '',
+      drawerSkin: drawerPlayer?.skin || null,
+      scores: room.scores,
+      masked: room.currentWord ? maskWord(room.currentWord) : null,
+      wordLen: room.currentWord?.length || 0,
+      round: room.currentRound,
+      totalRounds: room.settings.rounds,
+      timeLeft,
+      ownerIsSpectator: room.players.find(p => p.id === room.owner)?.isSpectator || false,
+    });
+
+    if (room.currentDrawer === socket.id && room.currentWord) {
+      socket.emit('your-word', { word: room.currentWord, masked: maskWord(room.currentWord) });
+    }
+
+    io.to(code).emit('players-update', { players: room.players });
   });
 
   socket.on('update-skin', ({ skin }) => {

@@ -14,6 +14,16 @@ function ErrorToast() {
 function Router() {
   const { state } = useGame();
 
+  if (state.reconnecting) {
+    return (
+      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100vh', background: 'linear-gradient(135deg, #FFF5E4, #f0ebff)', gap: 16 }}>
+        <div style={{ fontSize: 60 }}>🎨</div>
+        <div className="spinner" />
+        <p style={{ fontWeight: 700, color: '#888', fontSize: 16 }}>חוזר למשחק...</p>
+      </div>
+    );
+  }
+
   return (
     <BrowserRouter>
       <ErrorToast />

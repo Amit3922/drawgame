@@ -12,9 +12,8 @@ const initialState = {
   owner: null,
   isOwner: false,
   isSpectator: false,
-  gameState: 'home', // home | lobby | playing | ended
+  gameState: 'home',
   settings: { timeLimit: 80, rounds: 3, wordMode: 'random', customWords: [] },
-  // game
   currentDrawer: null,
   myWord: null,
   myWordSpectating: false,
@@ -32,6 +31,7 @@ const initialState = {
   ownerIsSpectator: false,
   error: null,
   qrData: null,
+  reconnecting: false,
 };
 
 function reducer(state, action) {
@@ -41,6 +41,7 @@ function reducer(state, action) {
     case 'SET_SOCKET': return { ...state, socket: action.socket };
     case 'SET_ERROR': return { ...state, error: action.error };
     case 'CLEAR_ERROR': return { ...state, error: null };
+    case 'SET_RECONNECTING': return { ...state, reconnecting: action.value };
 
     case 'LOBBY_CREATED':
     case 'LOBBY_JOINED':
@@ -51,11 +52,51 @@ function reducer(state, action) {
         settings: action.settings,
         owner: action.owner,
         isOwner: action.type === 'LOBBY_CREATED',
+        isSpectator: false,
         gameState: 'lobby',
         messages: [],
         scores: {},
         roundResult: null,
+        reconnecting: false,
       };
+
+    case 'REJOINED': {
+      const myId = state.socket?.id;
+      const base = {
+        ...state,
+        lobbyCode: action.code,
+        players: action.players,
+        settings: action.settings,
+        owner: action.owner,
+        isOwner: action.owner === myId,
+        isSpectator: action.players.find(p => p.id === myId)?.isSpectator || false,
+        scores: action.scores || {},
+        reconnecting: false,
+      };
+      if (action.gameState === 'lobby') {
+        return { ...base, gameState: 'lobby', messages: [], roundResult: null };
+      }
+      if (action.gameState === 'playing') {
+        return {
+          ...base,
+          gameState: 'playing',
+          ownerIsSpectator: action.ownerIsSpectator,
+          currentDrawer: action.currentDrawer,
+          drawerName: action.drawerName,
+          drawerSkin: action.drawerSkin,
+          maskedWord: action.masked,
+          wordLen: action.wordLen,
+          round: action.round,
+          totalRounds: action.totalRounds,
+          timeLeft: action.timeLeft,
+          messages: [],
+          guessedPlayers: [],
+          roundResult: null,
+          myWord: null,
+        };
+      }
+      return base;
+    }
 
     case 'PLAYERS_UPDATE':
       return {
@@ -119,6 +160,7 @@ function reducer(state, action) {
       };
 
     case 'GAME_OVER':
+      localStorage.removeItem('drawgame_session');
       return { ...state, gameState: 'ended', scores: action.scores, players: action.players, winner: action.winner };
 
     case 'QR_CODE':
@@ -127,7 +169,8 @@ function reducer(state, action) {
       return { ...state, publicUrl: action.url };
 
     case 'RESET':
-      return { ...initialState, socket: state.socket, playerName: state.playerName, playerSkin: state.playerSkin };
+      localStorage.removeItem('drawgame_session');
+      return { ...initialState, socket: state.socket };
 
     default: return state;
   }
@@ -136,13 +179,58 @@ function reducer(state, action) {
 export function GameProvider({ children }) {
   const [state, dispatch] = useReducer(reducer, initialState);
   const timerRef = useRef(null);
+  // Keep a ref to current state for use inside socket callbacks
+  const stateRef = useRef(state);
+  useEffect(() => { stateRef.current = state; }, [state]);
 
   useEffect(() => {
     const socket = io('/', { path: '/socket.io', transports: ['websocket', 'polling'] });
     dispatch({ type: 'SET_SOCKET', socket });
 
-    socket.on('lobby-created', d => dispatch({ type: 'LOBBY_CREATED', ...d }));
-    socket.on('lobby-joined', d => dispatch({ type: 'LOBBY_JOINED', ...d }));
+    // On connect / reconnect — try to restore session from localStorage
+    socket.on('connect', () => {
+      const raw = localStorage.getItem('drawgame_session');
+      if (raw) {
+        try {
+          const { code, playerName, skin } = JSON.parse(raw);
+          dispatch({ type: 'SET_RECONNECTING', value: true });
+          socket.emit('rejoin-lobby', { code, playerName, skin });
+        } catch { localStorage.removeItem('drawgame_session'); }
+      }
+    });
+
+    socket.on('lobby-created', d => {
+      localStorage.setItem('drawgame_session', JSON.stringify({
+        code: d.code,
+        playerName: stateRef.current.playerName,
+        skin: stateRef.current.playerSkin,
+      }));
+      dispatch({ type: 'LOBBY_CREATED', ...d });
+    });
+
+    socket.on('lobby-joined', d => {
+      localStorage.setItem('drawgame_session', JSON.stringify({
+        code: d.code,
+        playerName: stateRef.current.playerName,
+        skin: stateRef.current.playerSkin,
+      }));
+      dispatch({ type: 'LOBBY_JOINED', ...d });
+    });
+
+    socket.on('rejoined', d => {
+      dispatch({ type: 'REJOINED', ...d });
+      // Restart timer if mid-game
+      if (d.gameState === 'playing' && d.timeLeft > 0) {
+        clearInterval(timerRef.current);
+        let t = d.timeLeft;
+        timerRef.current = setInterval(() => {
+          t--;
+          dispatch({ type: 'TICK' });
+          if (t <= 0) clearInterval(timerRef.current);
+        }, 1000);
+      }
+    });
+
     socket.on('players-update', d => dispatch({ type: 'PLAYERS_UPDATE', ...d }));
     socket.on('settings-update', d => dispatch({ type: 'SETTINGS_UPDATE', ...d }));
     socket.on('game-started', d => dispatch({ type: 'GAME_STARTED', ...d }));
@@ -166,6 +254,7 @@ export function GameProvider({ children }) {
     socket.on('qr-code', d => dispatch({ type: 'QR_CODE', ...d }));
     socket.on('public-url', d => dispatch({ type: 'PUBLIC_URL', url: d.url }));
     socket.on('error', d => {
+      dispatch({ type: 'SET_RECONNECTING', value: false });
       dispatch({ type: 'SET_ERROR', error: d.msg });
       setTimeout(() => dispatch({ type: 'CLEAR_ERROR' }), 3500);
     });
