@@ -130,7 +130,7 @@ export default function Game() {
   // ── Mobile layout ──────────────────────────────────────────
   if (isMobile) {
     return (
-      <div style={{ display: 'flex', flexDirection: 'column', height: '100vh', background: '#f5f0ff', overflow: 'hidden' }}>
+      <div style={{ display: 'flex', flexDirection: 'column', height: '100dvh', minHeight: '100vh', background: '#f5f0ff', overflow: 'hidden' }}>
         {topBar}
 
         {/* Mobile tab bar */}
@@ -145,25 +145,22 @@ export default function Game() {
           ))}
         </div>
 
-        {/* Mobile content */}
-        <div style={{ flex: 1, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
-          {mobileTab === 'canvas' && (
-            <div style={{ flex: 1, padding: '8px', overflow: 'hidden' }}>
-              <DrawingCanvas isDrawer={isDrawer} isMobile={true}/>
+        {/* Mobile content — takes remaining height, no overflow so children can use 100% */}
+        <div style={{ flex: 1, minHeight: 0, position: 'relative' }}>
+          {/* Canvas tab */}
+          <div style={{ display: mobileTab === 'canvas' ? 'flex' : 'none', flexDirection: 'column', position: 'absolute', inset: 0, padding: 8, gap: 8 }}>
+            <DrawingCanvas isDrawer={isDrawer} isMobile={true}/>
+          </div>
+          {/* Chat tab */}
+          <div style={{ display: mobileTab === 'chat' ? 'flex' : 'none', flexDirection: 'column', position: 'absolute', inset: 0, padding: 8 }}>
+            <Chat isDrawer={isDrawer}/>
+          </div>
+          {/* Players tab */}
+          <div style={{ display: mobileTab === 'players' ? 'block' : 'none', position: 'absolute', inset: 0, overflowY: 'auto', padding: 8 }}>
+            <div style={{ background: 'white', borderRadius: 16, padding: 14 }}>
+              <PlayerList showScores={true}/>
             </div>
-          )}
-          {mobileTab === 'chat' && (
-            <div style={{ flex: 1, overflow: 'hidden', padding: '8px' }}>
-              <Chat isDrawer={isDrawer}/>
-            </div>
-          )}
-          {mobileTab === 'players' && (
-            <div style={{ flex: 1, overflowY: 'auto', padding: '8px' }}>
-              <div style={{ background: 'white', borderRadius: 16, padding: 14 }}>
-                <PlayerList showScores={true}/>
-              </div>
-            </div>
-          )}
+          </div>
         </div>
 
         {showRoundEnd && state.roundResult && (
@@ -176,7 +173,7 @@ export default function Game() {
 
   // ── Desktop layout ──────────────────────────────────────────
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', height: '100vh', background: 'linear-gradient(135deg, #FFF5E4, #f0ebff)', overflow: 'hidden' }}>
+    <div style={{ display: 'flex', flexDirection: 'column', height: '100dvh', minHeight: '100vh', background: 'linear-gradient(135deg, #FFF5E4, #f0ebff)', overflow: 'hidden' }}>
       {topBar}
 
       <div style={{ flex: 1, display: 'flex', gap: 12, padding: '12px 16px', overflow: 'hidden' }}>

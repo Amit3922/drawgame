@@ -59,7 +59,7 @@ export default function Lobby() {
   // ── Mobile layout ──────────────────────────────────────────
   if (isMobile) {
     return (
-      <div style={{ display: 'flex', flexDirection: 'column', height: '100vh', background: '#f5f0ff', overflow: 'hidden' }}>
+      <div style={{ display: 'flex', flexDirection: 'column', height: '100dvh', minHeight: '100vh', background: '#f5f0ff', overflow: 'hidden' }}>
 
         {/* Mobile top bar */}
         <div style={{ background: 'white', padding: '12px 16px', borderBottom: '2px solid #f0ebff', flexShrink: 0 }}>
@@ -90,7 +90,7 @@ export default function Lobby() {
         </div>
 
         {/* Mobile tab content */}
-        <div style={{ flex: 1, overflowY: 'auto', padding: 16 }}>
+        <div style={{ flex: 1, minHeight: 0, overflowY: 'auto', padding: 16 }}>
           {activeTab === 'skin' && (
             <div style={{ background: 'white', borderRadius: 16, padding: 16 }}>
               <SkinCustomizer skin={skin} onChange={updateSkin} />

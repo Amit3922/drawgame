@@ -166,8 +166,8 @@ export default function DrawingCanvas({ isDrawer, isMobile }) {
   );
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: isMobile ? 8 : 10, height: '100%' }}>
-      <div style={{ flex: 1, position: 'relative', background: '#fff', borderRadius: 16, overflow: 'hidden', boxShadow: '0 4px 24px rgba(0,0,0,0.12)', border: '3px solid #e8e0f0' }}>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: isMobile ? 8 : 10, height: '100%', minHeight: 0 }}>
+      <div style={{ flex: 1, minHeight: 0, position: 'relative', background: '#fff', borderRadius: 16, overflow: 'hidden', boxShadow: '0 4px 24px rgba(0,0,0,0.12)', border: '3px solid #e8e0f0' }}>
         <canvas
           ref={canvasRef}
           width={800}
